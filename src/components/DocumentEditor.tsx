@@ -32,6 +32,7 @@ const FIELD_TYPES = [
 export default function DocumentEditor({ file, recipients, fields, setFields, onSend, onSaveTemplate, onBack }: DocumentEditorProps) {
   const [selectedRecipient, setSelectedRecipient] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const documentRef = useRef<HTMLDivElement>(null);
 
   const getFileUrl = () => {
     if (!file) return '';
@@ -107,7 +108,7 @@ export default function DocumentEditor({ file, recipients, fields, setFields, on
 
       {/* Main Canvas */}
       <div className="flex-1 bg-gray-100 overflow-auto p-8 relative" ref={containerRef}>
-        <div className="max-w-[800px] mx-auto bg-white shadow-lg min-h-[1000px] relative">
+        <div className="max-w-[800px] mx-auto bg-white shadow-lg min-h-[1000px] relative" ref={documentRef}>
           {/* Document Preview */}
           {file ? (
             <img src={getFileUrl()} alt="Document" className="w-full h-auto" />
@@ -128,11 +129,14 @@ export default function DocumentEditor({ file, recipients, fields, setFields, on
               key={field.id}
               drag
               dragMomentum={false}
-              dragConstraints={containerRef}
+              dragConstraints={documentRef}
               onDragEnd={(_, info) => {
-                // Calculate position relative to container
-                // This is a simplified version; in production, use getBoundingClientRect
-                // For now, we just update state to simulate persistence
+                // Update position based on drag offset
+                // We use the existing x/y as base and add the drag delta
+                // Note: This is a simplified approach. For production, use getBoundingClientRect relative to documentRef
+                const newX = field.x + info.offset.x;
+                const newY = field.y + info.offset.y;
+                updateFieldPosition(field.id, newX, newY);
               }}
               initial={{ x: field.x, y: field.y }}
               className={`absolute cursor-move flex items-center gap-2 px-3 py-2 rounded border shadow-sm text-sm font-medium

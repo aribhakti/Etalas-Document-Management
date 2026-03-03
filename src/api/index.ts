@@ -37,19 +37,6 @@ db.prepare(`
   )
 `).run();
 
-// --- Contacts ---
-
-router.get('/contacts', (req, res) => {
-  const contacts = db.prepare(`
-    SELECT DISTINCT email, name, role 
-    FROM recipients 
-    WHERE email IS NOT NULL AND email != ''
-    GROUP BY email
-    ORDER BY name ASC
-  `).all();
-  res.json(contacts);
-});
-
 // --- Envelopes ---
 
 // Get all envelopes
@@ -256,14 +243,14 @@ router.post('/envelopes/from-template', (req, res) => {
   const newEnvelopeId = envInfo.lastInsertRowid;
 
   // 2. Copy documents
-  const docs = db.prepare('SELECT * FROM documents WHERE envelope_id = ?').all(templateId);
+  const docs = db.prepare('SELECT * FROM documents WHERE envelope_id = ? ORDER BY id ASC').all(templateId);
   const insertDoc = db.prepare('INSERT INTO documents (envelope_id, filename, filepath) VALUES (?, ?, ?)');
   for (const doc of docs) {
     insertDoc.run(newEnvelopeId, doc.filename, doc.filepath);
   }
 
   // 3. Copy recipients (optional, usually templates have roles but we'll copy structure)
-  const recipients = db.prepare('SELECT * FROM recipients WHERE envelope_id = ?').all(templateId);
+  const recipients = db.prepare('SELECT * FROM recipients WHERE envelope_id = ? ORDER BY id ASC').all(templateId);
   const insertRecipient = db.prepare('INSERT INTO recipients (envelope_id, email, name, role) VALUES (?, ?, ?, ?)');
   const recipientMap = new Map(); // Old ID -> New ID
   
@@ -282,7 +269,7 @@ router.post('/envelopes/from-template', (req, res) => {
   // Need to map old document IDs to new ones too, but for simplicity assuming 1 doc or order match
   // A robust solution would map doc IDs too. For this prototype, we'll just grab the first new doc ID
   // or assume order preservation.
-  const newDocs = db.prepare('SELECT * FROM documents WHERE envelope_id = ?').all(newEnvelopeId);
+  const newDocs = db.prepare('SELECT * FROM documents WHERE envelope_id = ? ORDER BY id ASC').all(newEnvelopeId);
   
   for (const f of fields) {
     // Find corresponding new doc ID (by index or filename)
